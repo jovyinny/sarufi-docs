@@ -14,8 +14,8 @@ The Chat API lets you programmatically converse with a published chatbot flow. T
 
 The flow is simple:
 
-1. **Create a session** - you get back a `session_id` and the bot's initial greeting
-2. **Send messages** - pass the `session_id` with each message, receive the bot's response synchronously
+1. **Create a session** - you get back a `session_id`. This initializes an empty, controlled session on your end; no bot messages are returned yet
+2. **Send messages** - pass the `session_id` with each message, receive the bot's response synchronously. The response to your **first** message contains the start of the flow
 3. Sessions expire automatically after 30 minutes of inactivity
 
 :::info[Requires a published flow]
@@ -26,7 +26,7 @@ The chatbot must have a published conversation flow. Use the [Flows API](./flows
 
 ## Create Chat Session
 
-Creates a new conversation session and returns the bot's initial greeting messages.
+Initializes a new conversation session. Session creation gives you a controlled, empty session on your end — it returns only the session identifier. The bot does not reply until you send the first message, exactly like the web and playground channels.
 
 ```http
 POST /api/dev/v1/chatbots/{chatbot_id}/chat/sessions
@@ -44,25 +44,11 @@ curl -X POST https://developers.sarufi.io/api/dev/v1/chatbots/<chatbot-id>/chat/
 {
   "session_id": "01JPQ...",
   "channel": "api",
-  "created_at": "2026-04-02T12:00:00Z",
-  "messages": [
-    {
-      "type": "text",
-      "text": "Hello! How can I help you today?"
-    },
-    {
-      "type": "buttons",
-      "text": "Choose an option:",
-      "buttons": [
-        { "id": "faq", "title": "FAQ" },
-        { "id": "support", "title": "Talk to support" }
-      ]
-    }
-  ]
+  "created_at": "2026-04-02T12:00:00Z"
 }
 ```
 
-The `messages` field contains the bot's greeting - the same messages a user would see when opening the chat widget for the first time.
+Session creation only initializes the session — no messages are returned. Send the user's first message to [Send Message](#send-message) (`POST /api/dev/v1/chatbots/{chatbot_id}/chat/sessions/{session_id}/messages`) to start the flow. The response to that first message contains the flow's opening messages (the same messages a user sees when opening the chat widget), following the GenericMessage structure.
 
 **Errors:**
 
@@ -154,7 +140,7 @@ curl -X POST https://developers.sarufi.io/api/dev/v1/chatbots/<chatbot-id>/chat/
 
 ## Session Lifecycle
 
-- **Creation**: Each `POST /sessions` creates a new isolated conversation with its own state.
+- **Creation**: Each `POST /sessions` initializes a new isolated, empty session with its own state. No messages are returned until you send the first message.
 - **Expiry**: Sessions expire after **30 minutes** of inactivity. After expiry, start a new session.
 - **Channel isolation**: Chat API sessions use the `api` channel. They are completely isolated from the same chatbot's `whatsapp`, `web`, or `sms` conversations.
 - **Conversation history**: All sessions and messages are persisted and can be retrieved via the [Conversations API](./conversations) using `channel=api`.
@@ -253,13 +239,11 @@ BASE = "https://developers.sarufi.io/api/dev/v1"
 HEADERS = {"Authorization": "Bearer <your-api-key>"}
 CHATBOT_ID = "<chatbot-id>"
 
-# Create session
+# Create session (returns session_id only)
 resp = requests.post(f"{BASE}/chatbots/{CHATBOT_ID}/chat/sessions", headers=HEADERS)
-session_data = resp.json()
-session_id = session_data["session_id"]
-print("Greeting:", session_data["messages"])
+session_id = resp.json()["session_id"]
 
-# Send message
+# Send the user's first message — the response starts the flow
 resp = requests.post(
     f"{BASE}/chatbots/{CHATBOT_ID}/chat/sessions/{session_id}/messages",
     headers=HEADERS,
