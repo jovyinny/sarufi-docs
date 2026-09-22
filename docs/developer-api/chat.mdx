@@ -245,6 +245,9 @@ The API also cannot send media from the user: the request has only `message`, `m
 
 ## Session Lifecycle
 
+- **Creation**: Each `POST /sessions` initializes a new isolated, empty session with its own state. No messages are returned until you send the first message.
+- **Expiry**: Sessions expire after **30 minutes** of inactivity. After expiry, create a new session; the bot starts again from its initial state on the next message.
+
 | Situation | What happens |
 |---|---|
 | Normal turn | The bot answers and the session moves to the state named in `current_state` |
